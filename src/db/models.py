@@ -5,81 +5,55 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
-    Enum,
+    Float,
+    BigInteger,
     ForeignKey,
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSON, UUID
-
-from ..utils.consts import EntityTypeChoices, FieldTypeChoices, RelationTypeChoices
+from sqlalchemy.dialects.postgresql import  UUID
 from .database import Base
 
 
-class CustomFieldConfig(Base):
-    __tablename__ = "custom_field_config"
+class User(Base):
+    __tablename__ = "user"
 
-    tenant_id = Column(UUID(as_uuid=True), index=True, nullable=False)
     id = Column(
         UUID(as_uuid=True), primary_key=True, unique=True, index=True, default=uuid4
     )
-    entity_type = Column(
-        Enum(EntityTypeChoices),
-        nullable=False,
-        default=EntityTypeChoices.asset,
-        index=True,
-    )
     name = Column(Text, nullable=True)
-    reference_id = Column(Text, nullable=True)
-    field_type = Column(
-        Enum(FieldTypeChoices), nullable=False, default=FieldTypeChoices.text
-    )
+    mobile = Column(BigInteger, nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(
         DateTime(timezone=True), nullable=False, default=datetime.utcnow
     )
-    created_by = Column(UUID(as_uuid=True), nullable=False, index=True)
-
     last_updated_at = Column(
         DateTime(timezone=True),
         nullable=False,
         onupdate=datetime.utcnow,
         default=datetime.utcnow,
     )
-    last_updated_by = Column(UUID(as_uuid=True), nullable=False, index=True)
+    last_updated_by = Column(UUID(as_uuid=True), nullable=True)
 
     __table_args__ = (
         UniqueConstraint(
-            "name", "entity_type", "tenant_id", name="unique_ids_custom_field_config"
+            "mobile", name="unique_ids_user_mobile"
         ),
     )
 
 
-class CustomFieldValue(Base):
-    __tablename__ = "custom_field_value"
+class Group(Base):
+    __tablename__ = "group"
 
-    tenant_id = Column(UUID(as_uuid=True), index=True, nullable=False)
     id = Column(
         UUID(as_uuid=True), primary_key=True, unique=True, index=True, default=uuid4
     )
-
-    cf_config_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("custom_field_config.id"),
-        index=True,
-        nullable=False,
-    )
-
-    entity_id = Column(UUID(as_uuid=True), index=True, nullable=False)
-
-    field_value = Column(JSON, nullable=True)
-
-    display_value = Column(Text, nullable=True)
-
+    name = Column(Text, nullable=True)
+    description = Column(Text, nullable=True)
     created_at = Column(
         DateTime(timezone=True), nullable=False, default=datetime.utcnow
     )
-    created_by = Column(UUID(as_uuid=True), nullable=False, index=True)
+    created_by = Column(UUID(as_uuid=True), nullable=True)
 
     last_updated_at = Column(
         DateTime(timezone=True),
@@ -87,35 +61,77 @@ class CustomFieldValue(Base):
         onupdate=datetime.utcnow,
         default=datetime.utcnow,
     )
-    last_updated_by = Column(UUID(as_uuid=True), nullable=False, index=True)
-
-    __table_args__ = (
-        UniqueConstraint(
-            "cf_config_id", "entity_id", name="unique_ids_custom_field_value"
-        ),
-    )
+    last_updated_by = Column(UUID(as_uuid=True), nullable=True)
 
 
-class CustomFieldEntityRelation(Base):
-    __tablename__ = "custom_field_entity_relation"
+class Expense(Base):
+    __tablename__ = "expense"
 
-    tenant_id = Column(UUID(as_uuid=True), index=True, nullable=False, primary_key=True)
-
-    relation_id = Column(
+    id = Column(
         UUID(as_uuid=True), index=True, nullable=False, primary_key=True
     )
-
-    cf_config_id = Column(
+    title = Column(Text, nullable=True)
+    description = Column(Text, nullable=True)
+    total_amount = Column(Float, default=0.0)
+    paid_by = Column(UUID(as_uuid=True), index=True, nullable=False)
+    group_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("custom_field_config.id"),
+        ForeignKey("group.id"),
         index=True,
         nullable=False,
-        primary_key=True,
+    )
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, default=datetime.utcnow
+    )
+    created_by = Column(UUID(as_uuid=True), nullable=True)
+
+    last_updated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        onupdate=datetime.utcnow,
+        default=datetime.utcnow,
+    )
+    last_updated_by = Column(UUID(as_uuid=True), nullable=True)
+
+
+class UserGroupMapping(Base):
+    __tablename__ = "user_group_mapping"
+
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("user.id"),
+        index=True,
+        nullable=False,
+        primary_key=True
     )
 
-    relation_type = Column(
-        Enum(RelationTypeChoices),
+    group_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("group.id"),
+        index=True,
         nullable=False,
-        default=RelationTypeChoices.asset_type,
-        primary_key=True,
+        primary_key=True 
     )
+    # Explanation: user_id and group_id is a composite key (hence have to mention primary key in both)
+
+
+class ExpenseUserMapping(Base):
+    __tablename__ = "expense_user_mapping"
+
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("user.id"),
+        index=True,
+        nullable=False,
+        primary_key=True
+    )
+
+    expense_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("expense.id"),
+        index=True,
+        nullable=False,
+        primary_key=True
+    )
+
+    amount = Column(Float, default=0.0)

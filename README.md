@@ -15,6 +15,21 @@ splitwise-service$ . ./python-setup.sh
 ```
 This will create a virtualenv called `pyenv` in the splitwise-service folder, install all dependencies, create a `logs` folder within splitwise-service and activate the virtualenv.
 
+**Database migrations**:
+
+Table migrations are managed via [Alembic](https://alembic.sqlalchemy.org/en/latest/tutorial.html). You will mostly be dealing with the following two commands:
+1. Creating a new migration for the model changes:
+    ```bash
+    $ alembic revision --autogenerate -m "mention changes here"
+    ```
+    This is equivalent of Django's `makemigrations` command.
+2. Running the migrations:
+    ```bash
+    $ alembic upgrade head
+    ```
+    This is the equivalent of Django's `migrate` command.
+
+Refer to the documentation for more configurations.
 
 ### Adding dependencies
 ```
