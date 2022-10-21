@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..config import get_settings, release
-from ..db.database import get_db
+from ..data.database import get_db
 from ..utils.consts import MetaServiceConsts
 from ..utils.custom_logger import CustomizeLogger
 

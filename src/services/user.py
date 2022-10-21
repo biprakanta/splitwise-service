@@ -2,12 +2,12 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from ..config import get_settings, release
-from ..db.database import get_db
-from ..db.db_interactions import (
+from ..data.database import get_db
+from ..data.db_interactions import (
     create_user,
     get_user_by_mobile
 )
-from ..db.schema import (
+from ..data.schema import (
     UserData
 )
 from ..utils.consts import MetaServiceConsts

@@ -45,7 +45,7 @@ def validate_mobile(db: Session, mobile: int) -> None:
 
 def create_group(db: Session, group_data: GroupData) -> GroupData:
     # TODO: after auth enabling create group with creator by getting identity from auth
-    create_stmt = insert(Group).values(**group_data.dict(exclude_unset=True))
+    create_stmt = insert(Group).values(**group_data.dict(exclude_none=True))
     
     try:
         db.execute(create_stmt)
@@ -74,6 +74,8 @@ def get_group_by_id(db: Session, group_id: str) -> Select:
         group_data.users = user_list
         return group_data
     else:
+        print(alt_select_statement)
+        print(db.execute(alt_select_statement).scalar())
         result = GroupData.from_orm(db.execute(alt_select_statement).scalar())
         result.users=[]
     return result

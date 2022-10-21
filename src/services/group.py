@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, Path
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
-from ..db.database import get_db
-from ..db.db_interactions import (
+from ..data.database import get_db
+from ..data.db_interactions import (
     create_group,
     get_group_by_id,
     update_group
 )
-from ..db.schema import (
+from ..data.schema import (
     GroupData
 )
 from ..utils.consts import MetaServiceConsts
@@ -46,7 +46,7 @@ async def start_group(
 ):
 
     group = create_group(db, group_data)
-    return GroupData.from_orm(group) if group else {}
+    return group if group else {}
 
 
 @router.patch("/group/{group_id}")
@@ -58,5 +58,5 @@ async def update_group_users(
 
     group = update_group(db, group_id, group_data)
     if group:
-        return GroupData.from_orm(group)
+        return group
     raise DoesNotExist("Group with id {} does not exist".format(group_id))

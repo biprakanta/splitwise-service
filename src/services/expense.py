@@ -2,12 +2,12 @@ from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
-from ..db.database import get_db
-from ..db.db_interactions import (
+from ..data.database import get_db
+from ..data.db_interactions import (
     insert_expense,
     get_expense_by_user_id
 )
-from ..db.schema import (
+from ..data.schema import (
     ExpenseCreate
 )
 from ..utils.consts import MetaServiceConsts

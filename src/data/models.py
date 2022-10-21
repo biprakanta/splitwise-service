@@ -19,7 +19,7 @@ class User(Base):
     __tablename__ = "user"
 
     id = Column(
-        UUID(as_uuid=True), primary_key=True, unique=True, index=True, default=uuid4
+        UUID(as_uuid=True), primary_key=True, index=True, default=uuid4
     )
     name = Column(Text, nullable=True)
     mobile = Column(BigInteger, nullable=True)
@@ -46,7 +46,7 @@ class Group(Base):
     __tablename__ = "group"
 
     id = Column(
-        UUID(as_uuid=True), primary_key=True, unique=True, index=True, default=uuid4
+        UUID(as_uuid=True), primary_key=True, index=True, default=uuid4
     )
     name = Column(Text, nullable=True)
     description = Column(Text, nullable=True)
