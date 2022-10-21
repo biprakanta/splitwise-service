@@ -1,12 +1,13 @@
 # pylint: disable=relative-beyond-top-level
 from sqlalchemy import func, insert, select, update
+from sqlalchemy.sql.expression import and_
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import exists
 from sqlalchemy.sql.selectable import Select
 
 from ..utils.consts import *
 from ..utils.exceptions import DuplicateMobileException, DoesNotExist
-from .models import User, Group, UserGroupMapping, Expense
+from .models import User, Group, UserGroupMapping, Expense, ExpenseUserMapping
 from .schema import UserData, GroupData, ExpenseCreate
 
 
@@ -23,11 +24,12 @@ def create_user(db: Session, user_data: UserData) -> User:
     validate_mobile(
         db, user_data.mobile
     )
-    create_stmt = insert(User).values(**user_data.dict(exclude_unset=True))
+    create_stmt = insert(User).values(**user_data.dict(exclude_none=True))
     
     try:
         db.execute(create_stmt)
-        db.commit()
+        #db.commit()
+        get_expense_by_user_id(db, user_data.id)
     except Exception as exe:
         raise exe
 
@@ -106,13 +108,61 @@ def update_group(db: Session, group_id: str, group_data: GroupData) -> GroupData
         db.commit()
         return get_group_by_id(db, group_id)
     except Exception as exe:
-        if "expense_user_mapping_user_id_fkey" in str(exe) or "expense_user_mapping_group_id_fkey" in str(exe):
+        if "user_group_mapping_user_id_fkey" in str(exe) or "user_group_mapping_group_id_fkey" in str(exe):
             raise Exception("Invalid UserId/GroupId")
         raise exe
 
 
 def insert_expense(db: Session,  expense_data: ExpenseCreate) -> ExpenseCreate:
     mapping = []
+    if expense_data.shares:
+        for user_id, share in expense_data.shares.items():
+            mapping.append(
+                {
+                    "user_id": user_id,
+                    "amount": share,
+                    "expense_id": expense_data.id
+                }
+            )
+    else:
+        group_data = get_group_by_id(db, expense_data.group_id)
+        if group_data.users:
+            share = expense_data.total_amount/(len(group_data.users))
+            for user in group_data.users:
+                mapping.append(
+                {
+                    "user_id": user.id,
+                    "amount": share,
+                    "expense_id": expense_data.id
+                }
+            )
+    expense_data = expense_data.dict(exclude_none=True)
+    expense_data.pop('shares')
+    create_stmt = insert(Expense).values(**expense_data)
+    try:
+        db.execute(create_stmt)
+        if mapping:
+            db.bulk_insert_mappings(ExpenseUserMapping, mapping)
+        db.commit()
+        return expense_data
+    except Exception as exe:
+        if "expense_user_mapping_user_id_fkey" in str(exe) or "expense_user_mapping_expense_id_fkey" in str(exe):
+            raise Exception("Invalid UserId/GroupId")
+        raise exe
 
 def get_expense_by_user_id(db: Session, user_id: str):
-    pass
+    select_stmt = (
+        select(
+            ExpenseUserMapping.amount,
+            Expense.title, 
+            Expense.created_at,
+            Expense.paid_by,
+            Group.name
+        )
+        .join(Expense, ExpenseUserMapping.expense_id == Expense.id)
+        .join(Group, Group.id==Expense.group_id)
+        .where(ExpenseUserMapping.user_id == user_id)
+        
+    )
+    print(select_stmt)
+    result = db.execute(select_stmt).scalars().all()

@@ -36,7 +36,7 @@ class ExpenseCreate(BaseModel):
     id: Optional[UUID4] = Field(default_factory=uuid4)
     title: str
     description: Optional[str] 
-    total_amount: int
+    total_amount: float
     paid_by: UUID4
     group_id: Optional[UUID4]
     shares: Optional[Dict[UUID4, int]]
@@ -49,10 +49,11 @@ class ExpenseHistory(BaseModel):
     id: Optional[UUID4] = Field(default_factory=uuid4)
     title: str
     description: Optional[str] 
-    total_amount: int
+    total_amount: float
+    pending: float
     paid_by: UUID4
     group_id: Optional[UUID4]
-    shares: Optional[Dict[UUID4, int]]
+    group_name: str
     created_at: Optional[datetime]
     created_by: Optional[UUID4]
     last_updated_by: Optional[UUID4]
