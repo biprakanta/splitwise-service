@@ -1,4 +1,5 @@
 # pylint: disable=relative-beyond-top-level
+from typing import List
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.sql.expression import case
 from sqlalchemy.orm import Session
@@ -151,7 +152,7 @@ def insert_expense(db: Session,  expense_data: ExpenseCreate) -> ExpenseCreate:
             raise Exception("Invalid UserId/GroupId")
         raise exe
 
-def get_expense_by_user_id(db: Session, user_id: str):
+def get_expense_by_user_id(db: Session, user_id: str) -> List[ExpenseHistory]:
     select_stmt = (
         select(
             ExpenseUserMapping.amount,
@@ -182,3 +183,8 @@ def get_expense_by_user_id(db: Session, user_id: str):
     return results
 
 
+def get_settlement_for_user_id(db: Session, user_id: str):
+    pass
+
+def make_settlement_for_user_id(db: Session, user_id: str):
+    pass
