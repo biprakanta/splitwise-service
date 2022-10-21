@@ -1,14 +1,15 @@
 # pylint: disable=relative-beyond-top-level
 from sqlalchemy import func, insert, select, update
-from sqlalchemy.sql.expression import and_
+from sqlalchemy.sql.expression import case
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import exists
 from sqlalchemy.sql.selectable import Select
 
+
 from ..utils.consts import *
 from ..utils.exceptions import DuplicateMobileException, DoesNotExist
 from .models import User, Group, UserGroupMapping, Expense, ExpenseUserMapping
-from .schema import UserData, GroupData, ExpenseCreate
+from .schema import UserData, GroupData, ExpenseCreate, ExpenseHistory
 
 
 def get_user_by_mobile(db: Session, mobile: int) -> Select:
@@ -154,15 +155,30 @@ def get_expense_by_user_id(db: Session, user_id: str):
     select_stmt = (
         select(
             ExpenseUserMapping.amount,
+            Expense.id, 
             Expense.title, 
             Expense.created_at,
             Expense.paid_by,
-            Group.name
+            Expense.total_amount,
+            Group.id.label('group_id'),
+            Group.name,
+            case( [
+                
+                (Expense.paid_by == user_id, Expense.total_amount - ExpenseUserMapping.amount), 
+                (Expense.paid_by != user_id, -1*ExpenseUserMapping.amount)
+                ]
+                ).label('pending')
+        
         )
         .join(Expense, ExpenseUserMapping.expense_id == Expense.id)
         .join(Group, Group.id==Expense.group_id)
         .where(ExpenseUserMapping.user_id == user_id)
         
     )
-    print(select_stmt)
-    result = db.execute(select_stmt).scalars().all()
+    cursor = db.execute(select_stmt).scalars().all()
+    results = []
+    for result in cursor:
+        results.append(ExpenseHistory.from_orm(result))
+    return results
+
+

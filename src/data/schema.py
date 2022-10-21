@@ -46,13 +46,14 @@ class ExpenseCreate(BaseModel):
     last_updated_at: Optional[datetime]
 
 class ExpenseHistory(BaseModel):
-    id: Optional[UUID4] = Field(default_factory=uuid4)
+    id: UUID4
     title: str
     description: Optional[str] 
     total_amount: float
     pending: float
     paid_by: UUID4
-    group_id: Optional[UUID4]
+    group_id: UUID4
+    pending: float
     group_name: str
     created_at: Optional[datetime]
     created_by: Optional[UUID4]
