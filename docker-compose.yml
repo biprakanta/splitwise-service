@@ -8,7 +8,7 @@ services:
     environment:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PASSWORD=postgres123
   web:
     build: .
     command: uvicorn src.main:app --host 0.0.0.0
