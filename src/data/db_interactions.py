@@ -1,6 +1,7 @@
 # pylint: disable=relative-beyond-top-level
 from typing import List
-from sqlalchemy import func, insert, select, update
+from datetime import datetime
+from sqlalchemy import func, insert, select, update, and_, or_
 from sqlalchemy.sql.expression import case
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import exists
@@ -30,8 +31,7 @@ def create_user(db: Session, user_data: UserData) -> User:
     
     try:
         db.execute(create_stmt)
-        #db.commit()
-        get_expense_by_user_id(db, user_data.id)
+        db.commit()
     except Exception as exe:
         raise exe
 
@@ -78,8 +78,6 @@ def get_group_by_id(db: Session, group_id: str) -> Select:
         group_data.users = user_list
         return group_data
     else:
-        print(alt_select_statement)
-        print(db.execute(alt_select_statement).scalar())
         result = GroupData.from_orm(db.execute(alt_select_statement).scalar())
         result.users=[]
     return result
@@ -152,7 +150,7 @@ def insert_expense(db: Session,  expense_data: ExpenseCreate) -> ExpenseCreate:
             raise Exception("Invalid UserId/GroupId")
         raise exe
 
-def get_expense_by_user_id(db: Session, user_id: str) -> List[ExpenseHistory]:
+def get_expense_by_user_id(db: Session, user_id: str, start_date: datetime, end_date: datetime) -> List[ExpenseHistory]:
     select_stmt = (
         select(
             ExpenseUserMapping.amount,
@@ -183,8 +181,54 @@ def get_expense_by_user_id(db: Session, user_id: str) -> List[ExpenseHistory]:
     return results
 
 
-def get_settlement_for_user_id(db: Session, user_id: str):
-    pass
+def get_settlement_for_user_id(db: Session, user_id: str, settle_with: str, group_id) -> float:
+    select_stmt = (
+        select(
+            func.sum(case( [
+                
+                (Expense.paid_by == user_id, Expense.total_amount - ExpenseUserMapping.amount), 
+                (Expense.paid_by == settle_with, -1*ExpenseUserMapping.amount)
+                ]
+                )).label('amount')
+        
+        )
+        .join(Expense, ExpenseUserMapping.expense_id == Expense.id)
+        .join(Group, Group.id==Expense.group_id)
+        .where(ExpenseUserMapping.user_id == user_id)
+        .where(Expense.group_id == group_id)
+        
+    )
+    result = db.execute(select_stmt).scalar().amount
+    return result
 
-def make_settlement_for_user_id(db: Session, user_id: str):
-    pass
+def make_settlement_for_user_id(db: Session, user_id: str, settle_with: str, group_id: str):
+    update_stmt = (
+        update(ExpenseUserMapping).values(
+            {ExpenseUserMapping.amount: 0.0}
+        )
+        .where(
+            or_(
+                and_(
+                    ExpenseUserMapping.user_id == user_id,
+                    Expense.paid_by == settle_with
+                ),
+                and_(
+                    ExpenseUserMapping.user_id == settle_with,
+                    Expense.paid_by == user_id
+                )
+            )
+        )
+        .where(
+            and_(
+                Expense.group_id == group_id,
+                ExpenseUserMapping.expense_id == Expense.id
+            )
+        )
+
+        
+    )
+    try:
+        db.execute(update_stmt)
+        db.commit()
+    except Exception:
+        raise 
