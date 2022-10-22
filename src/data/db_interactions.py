@@ -2,7 +2,7 @@
 from typing import List
 from datetime import datetime
 from sqlalchemy import func, insert, select, update, and_, or_
-from sqlalchemy.sql.expression import case
+from sqlalchemy import case
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import exists
 from sqlalchemy.sql.selectable import Select
@@ -186,30 +186,31 @@ def get_settlement_for_user_id(
                 case(
                     [
                         (
-                            Expense.paid_by == settle_with,
-                            -ExpenseUserMapping.amount,
+                            and_(
+                                Expense.paid_by == settle_with,
+                                ExpenseUserMapping.user_id == user_id
+                            ),
+                            -1 * ExpenseUserMapping.amount,
                         ),
                         (
-                            Expense.paid_by == user_id,
-                            Expense.total_amount - ExpenseUserMapping.amount,
+                            and_(
+                                Expense.paid_by == user_id,
+                                ExpenseUserMapping.user_id == settle_with
+                            ),
+                            ExpenseUserMapping.amount,
                         ),
+                        
                        
-                    ]
+                    ],
+                    else_ = 0.0
                 )
             ).label("amount")
         )
         .join(Expense, ExpenseUserMapping.expense_id == Expense.id)
         .join(Group, Group.id == Expense.group_id)
-        .where(
-            or_(
-                Expense.paid_by == user_id,
-                Expense.paid_by == settle_with
-            )
-        )
         .where(Expense.group_id == group_id)
     )
     result = db.execute(select_stmt).all()
-    print(result)
     return result
 
 
