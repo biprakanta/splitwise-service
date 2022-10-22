@@ -64,7 +64,17 @@ class ExpenseHistory(BaseModel):
     class Config:
         orm_mode = True
 
+
 class SettlementRequest(BaseModel):
     user_id: UUID4
     settle_with: UUID4
     group_id: UUID4
+
+
+class SettlementInterim(BaseModel):
+    user_id: UUID4
+    expense_id: UUID4
+    amount: Optional[float]
+
+    class Config:
+        orm_mode = True

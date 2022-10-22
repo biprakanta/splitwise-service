@@ -11,7 +11,13 @@ from sqlalchemy.sql.selectable import Select
 from ..utils.consts import *
 from ..utils.exceptions import DuplicateMobileException, DoesNotExist
 from .models import User, Group, UserGroupMapping, Expense, ExpenseUserMapping
-from .schema import UserData, GroupData, ExpenseCreate, ExpenseHistory
+from .schema import (
+    UserData,
+    GroupData,
+    ExpenseCreate,
+    ExpenseHistory,
+    SettlementInterim,
+)
 
 
 def get_user_by_mobile(db: Session, mobile: int) -> Select:
@@ -170,9 +176,8 @@ def get_expense_by_user_id(
     )
     cursor = db.execute(select_stmt).all()
     results = []
-    print(cursor)
     for result in cursor:
-        #print(vars(result))
+        # print(vars(result))
         results.append(ExpenseHistory.from_orm(result))
     return results
 
@@ -188,21 +193,19 @@ def get_settlement_for_user_id(
                         (
                             and_(
                                 Expense.paid_by == settle_with,
-                                ExpenseUserMapping.user_id == user_id
+                                ExpenseUserMapping.user_id == user_id,
                             ),
                             -1 * ExpenseUserMapping.amount,
                         ),
                         (
                             and_(
                                 Expense.paid_by == user_id,
-                                ExpenseUserMapping.user_id == settle_with
+                                ExpenseUserMapping.user_id == settle_with,
                             ),
                             ExpenseUserMapping.amount,
                         ),
-                        
-                       
                     ],
-                    else_ = 0.0
+                    else_=0.0,
                 )
             ).label("amount")
         )
@@ -217,30 +220,38 @@ def get_settlement_for_user_id(
 def make_settlement_for_user_id(
     db: Session, user_id: str, settle_with: str, group_id: str
 ):
-    update_stmt = (
-        update(ExpenseUserMapping)
-        .values({ExpenseUserMapping.amount: 0.0})
+
+    select_stmt = (
+        select(ExpenseUserMapping)
+        .join(Expense, ExpenseUserMapping.expense_id == Expense.id)
+        .join(Group, Group.id == Expense.group_id)
+        .where(Expense.group_id == group_id)
         .where(
             or_(
                 and_(
-                    ExpenseUserMapping.user_id == user_id,
                     Expense.paid_by == settle_with,
+                    ExpenseUserMapping.user_id == user_id,
                 ),
                 and_(
-                    ExpenseUserMapping.user_id == settle_with,
                     Expense.paid_by == user_id,
+                    ExpenseUserMapping.user_id == settle_with,
                 ),
-            )
-        )
-        .where(
-            and_(
-                Expense.group_id == group_id,
-                ExpenseUserMapping.expense_id == Expense.id,
             )
         )
     )
+    candidates = db.execute(select_stmt).scalars().unique().all()
+    mappings = []
+    for candidate in candidates:
+        try:
+            data = SettlementInterim.from_orm(candidate)
+            data.amount = 0.0
+            mappings.append(data.dict())
+        except:
+            pass
+
+
     try:
-        db.execute(update_stmt)
+        db.bulk_update_mappings(ExpenseUserMapping, mappings)
         db.commit()
     except Exception:
         raise
