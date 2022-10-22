@@ -151,7 +151,7 @@ def get_expense_by_user_id(
             Expense.paid_by,
             Expense.total_amount,
             Group.id.label("group_id"),
-            Group.name,
+            Group.name.label("group_name"),
             case(
                 [
                     (
@@ -168,9 +168,11 @@ def get_expense_by_user_id(
         .where(Expense.created_at >= start_date)
         .where(Expense.created_at <= end_date)
     )
-    cursor = db.execute(select_stmt).scalars().all()
+    cursor = db.execute(select_stmt).all()
     results = []
+    print(cursor)
     for result in cursor:
+        #print(vars(result))
         results.append(ExpenseHistory.from_orm(result))
     return results
 

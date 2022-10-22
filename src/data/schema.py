@@ -61,6 +61,8 @@ class ExpenseHistory(BaseModel):
     last_updated_by: Optional[UUID4]
     last_updated_at: Optional[datetime]
 
+    class Config:
+        orm_mode = True
 
 class SettlementRequest(BaseModel):
     user_id: UUID4
