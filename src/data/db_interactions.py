@@ -120,7 +120,10 @@ def insert_expense(db: Session, expense_data: ExpenseCreate) -> ExpenseCreate:
                     {"user_id": user.id, "amount": share, "expense_id": expense_data.id}
                 )
     expense_data = expense_data.dict(exclude_none=True)
-    expense_data.pop("shares")
+    try:
+        expense_data.pop("shares")
+    except:
+        pass
     create_stmt = insert(Expense).values(**expense_data)
     try:
         db.execute(create_stmt)
