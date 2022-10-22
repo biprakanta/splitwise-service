@@ -13,6 +13,7 @@ ENV.read_env(os.path.join(BASE_DIR, ".env"))
 
 release = get_build_info()
 
+
 class Settings(BaseSettings):
     postgres_host: str = ENV.str("POSTGRES_HOST")
     postgres_port: str = ENV.str("POSTGRES_PORT")

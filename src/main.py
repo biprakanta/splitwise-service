@@ -9,7 +9,6 @@ settings = get_settings()
 logger = CustomizeLogger.make_logger(settings)
 
 
-
 app = FastAPI()
 app.logger = logger
 

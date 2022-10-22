@@ -1,8 +1,8 @@
 """initial models
 
-Revision ID: 13b1769d4da8
+Revision ID: ea2004160ed0
 Revises: 
-Create Date: 2022-10-22 01:28:14.419809
+Create Date: 2022-10-22 06:20:39.153014
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '13b1769d4da8'
+revision = 'ea2004160ed0'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -28,7 +28,7 @@ def upgrade():
     sa.Column('last_updated_by', postgresql.UUID(as_uuid=True), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_group_id'), 'group', ['id'], unique=True)
+    op.create_index(op.f('ix_group_id'), 'group', ['id'], unique=False)
     op.create_table('user',
     sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
     sa.Column('name', sa.Text(), nullable=True),
@@ -40,7 +40,7 @@ def upgrade():
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('mobile', name='unique_ids_user_mobile')
     )
-    op.create_index(op.f('ix_user_id'), 'user', ['id'], unique=True)
+    op.create_index(op.f('ix_user_id'), 'user', ['id'], unique=False)
     op.create_table('expense',
     sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
     sa.Column('title', sa.Text(), nullable=True),

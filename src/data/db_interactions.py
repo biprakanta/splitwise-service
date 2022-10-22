@@ -15,20 +15,15 @@ from .schema import UserData, GroupData, ExpenseCreate, ExpenseHistory
 
 
 def get_user_by_mobile(db: Session, mobile: int) -> Select:
-    select_statement = (
-        select(User)
-        .where(User.mobile == mobile)
-    )
+    select_statement = select(User).where(User.mobile == mobile)
     result = db.execute(select_statement).scalar()
     return result
 
 
 def create_user(db: Session, user_data: UserData) -> User:
-    validate_mobile(
-        db, user_data.mobile
-    )
+    validate_mobile(db, user_data.mobile)
     create_stmt = insert(User).values(**user_data.dict(exclude_none=True))
-    
+
     try:
         db.execute(create_stmt)
         db.commit()
@@ -39,10 +34,7 @@ def create_user(db: Session, user_data: UserData) -> User:
 
 
 def validate_mobile(db: Session, mobile: int) -> None:
-    select_stmt = (
-        select(exists(User))
-        .where(User.mobile == mobile)
-    )
+    select_stmt = select(exists(User)).where(User.mobile == mobile)
     if db.execute(select_stmt).scalar():
         raise DuplicateMobileException("Custom Field with same name already exists")
 
@@ -50,7 +42,7 @@ def validate_mobile(db: Session, mobile: int) -> None:
 def create_group(db: Session, group_data: GroupData) -> GroupData:
     # TODO: after auth enabling create group with creator by getting identity from auth
     create_stmt = insert(Group).values(**group_data.dict(exclude_none=True))
-    
+
     try:
         db.execute(create_stmt)
         db.commit()
@@ -59,17 +51,15 @@ def create_group(db: Session, group_data: GroupData) -> GroupData:
 
     return get_group_by_id(db, group_data.id)
 
+
 def get_group_by_id(db: Session, group_id: str) -> Select:
     select_statement = (
         select(UserGroupMapping, Group, User)
-        .join(Group).join(User)
+        .join(Group)
+        .join(User)
         .where(Group.id == group_id)
     )
-    alt_select_statement = (
-        select(Group)
-        .where(Group.id == group_id)
-    )
-
+    alt_select_statement = select(Group).where(Group.id == group_id)
 
     result = db.execute(select_statement).all()
     if result:
@@ -79,28 +69,27 @@ def get_group_by_id(db: Session, group_id: str) -> Select:
         return group_data
     else:
         result = GroupData.from_orm(db.execute(alt_select_statement).scalar())
-        result.users=[]
+        result.users = []
     return result
+
 
 def update_group(db: Session, group_id: str, group_data: GroupData) -> GroupData:
     # TODO: Only allowing adding users to group
     mapping = []
     for user_id in group_data.users:
-        assert(not isinstance(user_id, UserData))
+        assert not isinstance(user_id, UserData)
         mapping.append(
             {
                 "user_id": user_id,
                 "group_id": group_id,
             }
         )
-    
+
     group_data = group_data.dict(exclude_unset=True)
     group_data.pop("users")
     if group_data:
         update_statement = (
-            update(Group)
-            .where(Group.id == group_id)
-            .values(**group_data)
+            update(Group).where(Group.id == group_id).values(**group_data)
         )
         db.execute(update_statement)
     try:
@@ -108,36 +97,30 @@ def update_group(db: Session, group_id: str, group_data: GroupData) -> GroupData
         db.commit()
         return get_group_by_id(db, group_id)
     except Exception as exe:
-        if "user_group_mapping_user_id_fkey" in str(exe) or "user_group_mapping_group_id_fkey" in str(exe):
+        if "user_group_mapping_user_id_fkey" in str(
+            exe
+        ) or "user_group_mapping_group_id_fkey" in str(exe):
             raise Exception("Invalid UserId/GroupId")
         raise exe
 
 
-def insert_expense(db: Session,  expense_data: ExpenseCreate) -> ExpenseCreate:
+def insert_expense(db: Session, expense_data: ExpenseCreate) -> ExpenseCreate:
     mapping = []
     if expense_data.shares:
         for user_id, share in expense_data.shares.items():
             mapping.append(
-                {
-                    "user_id": user_id,
-                    "amount": share,
-                    "expense_id": expense_data.id
-                }
+                {"user_id": user_id, "amount": share, "expense_id": expense_data.id}
             )
     else:
         group_data = get_group_by_id(db, expense_data.group_id)
         if group_data.users:
-            share = expense_data.total_amount/(len(group_data.users))
+            share = expense_data.total_amount / (len(group_data.users))
             for user in group_data.users:
                 mapping.append(
-                {
-                    "user_id": user.id,
-                    "amount": share,
-                    "expense_id": expense_data.id
-                }
-            )
+                    {"user_id": user.id, "amount": share, "expense_id": expense_data.id}
+                )
     expense_data = expense_data.dict(exclude_none=True)
-    expense_data.pop('shares')
+    expense_data.pop("shares")
     create_stmt = insert(Expense).values(**expense_data)
     try:
         db.execute(create_stmt)
@@ -146,33 +129,41 @@ def insert_expense(db: Session,  expense_data: ExpenseCreate) -> ExpenseCreate:
         db.commit()
         return expense_data
     except Exception as exe:
-        if "expense_user_mapping_user_id_fkey" in str(exe) or "expense_user_mapping_expense_id_fkey" in str(exe):
+        if "expense_user_mapping_user_id_fkey" in str(
+            exe
+        ) or "expense_user_mapping_expense_id_fkey" in str(exe):
             raise Exception("Invalid UserId/GroupId")
         raise exe
 
-def get_expense_by_user_id(db: Session, user_id: str, start_date: datetime, end_date: datetime) -> List[ExpenseHistory]:
+
+def get_expense_by_user_id(
+    db: Session, user_id: str, start_date: datetime, end_date: datetime
+) -> List[ExpenseHistory]:
     select_stmt = (
         select(
             ExpenseUserMapping.amount,
-            Expense.id, 
-            Expense.title, 
+            Expense.id,
+            Expense.title,
             Expense.created_at,
             Expense.paid_by,
             Expense.total_amount,
-            Group.id.label('group_id'),
+            Group.id.label("group_id"),
             Group.name,
-            case( [
-                
-                (Expense.paid_by == user_id, Expense.total_amount - ExpenseUserMapping.amount), 
-                (Expense.paid_by != user_id, -1*ExpenseUserMapping.amount)
+            case(
+                [
+                    (
+                        Expense.paid_by == user_id,
+                        Expense.total_amount - ExpenseUserMapping.amount,
+                    ),
+                    (Expense.paid_by != user_id, -1 * ExpenseUserMapping.amount),
                 ]
-                ).label('pending')
-        
+            ).label("pending"),
         )
         .join(Expense, ExpenseUserMapping.expense_id == Expense.id)
-        .join(Group, Group.id==Expense.group_id)
+        .join(Group, Group.id == Expense.group_id)
         .where(ExpenseUserMapping.user_id == user_id)
-        
+        .where(Expense.created_at >= start_date)
+        .where(Expense.created_at <= end_date)
     )
     cursor = db.execute(select_stmt).scalars().all()
     results = []
@@ -181,54 +172,62 @@ def get_expense_by_user_id(db: Session, user_id: str, start_date: datetime, end_
     return results
 
 
-def get_settlement_for_user_id(db: Session, user_id: str, settle_with: str, group_id) -> float:
+def get_settlement_for_user_id(
+    db: Session, user_id: str, settle_with: str, group_id
+) -> float:
     select_stmt = (
         select(
-            func.sum(case( [
-                
-                (Expense.paid_by == user_id, Expense.total_amount - ExpenseUserMapping.amount), 
-                (Expense.paid_by == settle_with, -1*ExpenseUserMapping.amount)
-                ]
-                )).label('amount')
-        
+            func.sum(
+                case(
+                    [
+                        (
+                            Expense.paid_by == user_id,
+                            Expense.total_amount - ExpenseUserMapping.amount,
+                        ),
+                        (
+                            Expense.paid_by == settle_with,
+                            -1 * ExpenseUserMapping.amount,
+                        ),
+                    ]
+                )
+            ).label("amount")
         )
         .join(Expense, ExpenseUserMapping.expense_id == Expense.id)
-        .join(Group, Group.id==Expense.group_id)
+        .join(Group, Group.id == Expense.group_id)
         .where(ExpenseUserMapping.user_id == user_id)
         .where(Expense.group_id == group_id)
-        
     )
     result = db.execute(select_stmt).scalar().amount
     return result
 
-def make_settlement_for_user_id(db: Session, user_id: str, settle_with: str, group_id: str):
+
+def make_settlement_for_user_id(
+    db: Session, user_id: str, settle_with: str, group_id: str
+):
     update_stmt = (
-        update(ExpenseUserMapping).values(
-            {ExpenseUserMapping.amount: 0.0}
-        )
+        update(ExpenseUserMapping)
+        .values({ExpenseUserMapping.amount: 0.0})
         .where(
             or_(
                 and_(
                     ExpenseUserMapping.user_id == user_id,
-                    Expense.paid_by == settle_with
+                    Expense.paid_by == settle_with,
                 ),
                 and_(
                     ExpenseUserMapping.user_id == settle_with,
-                    Expense.paid_by == user_id
-                )
+                    Expense.paid_by == user_id,
+                ),
             )
         )
         .where(
             and_(
                 Expense.group_id == group_id,
-                ExpenseUserMapping.expense_id == Expense.id
+                ExpenseUserMapping.expense_id == Expense.id,
             )
         )
-
-        
     )
     try:
         db.execute(update_stmt)
         db.commit()
     except Exception:
-        raise 
+        raise

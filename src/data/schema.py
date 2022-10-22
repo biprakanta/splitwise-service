@@ -35,7 +35,7 @@ class GroupData(BaseModel):
 class ExpenseCreate(BaseModel):
     id: Optional[UUID4] = Field(default_factory=uuid4)
     title: str
-    description: Optional[str] 
+    description: Optional[str]
     total_amount: float
     paid_by: UUID4
     group_id: Optional[UUID4]
@@ -45,10 +45,11 @@ class ExpenseCreate(BaseModel):
     last_updated_by: Optional[UUID4]
     last_updated_at: Optional[datetime]
 
+
 class ExpenseHistory(BaseModel):
     id: UUID4
     title: str
-    description: Optional[str] 
+    description: Optional[str]
     total_amount: float
     pending: float
     paid_by: UUID4
@@ -60,3 +61,8 @@ class ExpenseHistory(BaseModel):
     last_updated_by: Optional[UUID4]
     last_updated_at: Optional[datetime]
 
+
+class SettlementRequest(BaseModel):
+    user_id: UUID4
+    settle_with: UUID4
+    group_id: UUID4

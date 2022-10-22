@@ -31,4 +31,3 @@ async def get_buildinfo(db: Session = Depends(get_db)):
         LOGGER.exception(err)
     result.update({MetaServiceConsts.HEALTH: health_check_meta})
     return result
-
