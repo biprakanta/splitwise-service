@@ -5,6 +5,7 @@
 ```
 splitwise-service$ docker-compose up
 ```
+ Go to [http://localhost:8000/docs](http://localhost:8000/docs)
 ## Development
 ### Local Environment Setup
 ```sh
