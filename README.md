@@ -1,7 +1,10 @@
 # Splitwise Service
 > Splitwise Service Readme
 
-
+## Usage
+```
+splitwise-service$ docker-compose up
+```
 ## Development
 ### Local Environment Setup
 ```sh

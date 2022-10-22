@@ -17,6 +17,7 @@ WORKDIR /app
 COPY --from=requirements-stage /tmp/requirements.txt /app/requirements.txt
 
 # COPY ./packages /tmp/packages
+COPY ./setup_db.py /app/setup_db.py
 
 RUN apt update && \
     apt install -y gcc libpq-dev libpq5 && \
@@ -25,7 +26,7 @@ RUN apt update && \
 
 COPY ./src /app/src
 COPY ./build_info.json /app/
-COPY ./alembic.prod.ini /app/alembic.ini
+COPY ./alembic.ini /app/alembic.ini
 EXPOSE 8000
 
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0"]

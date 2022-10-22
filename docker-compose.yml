@@ -1,4 +1,4 @@
-version: "3.9"
+version: "3.3"
    
 services:
   db:
@@ -11,14 +11,29 @@ services:
       - POSTGRES_PASSWORD=postgres123
   web:
     build: .
-    command: uvicorn src.main:app --host 0.0.0.0
+    command:  >
+      sh -c "python setup_db.py &&
+             alembic upgrade head &&
+             uvicorn src.main:app --host 0.0.0.0"
+    
     volumes:
       - .:/code
     ports:
       - "8000:8000"
     environment:
-      - POSTGRES_NAME=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_ROOT_NAME=postgres
+      - POSTGRES_ROOT_USER=postgres
+      - POSTGRES_ROOT_PASSWORD=postgres123
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=splitwisedb
+      - POSTGRES_USER=splitwiseuser
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_SSLMODE=prefer
+      - LOGGER_LEVEL=DEBUG
+      - LOGGER_PATH=./logs/access.log
+      - LOGGER_ROTATION=20 days
+      - LOGGER_RETENTION=1 months
+      - "LOGGER_FORMAT=<green>[{time:YYYY-MM-DD HH:mm:ss.SSS}] </green> |<level> {level:}: </level>  request id: {extra[request_id]} - <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>"
     depends_on:
       - db
